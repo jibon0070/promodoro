@@ -4,6 +4,7 @@ import {
   pgEnum,
   pgTable,
   serial,
+  text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -22,6 +23,7 @@ export const UserModel = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username").notNull().unique(),
   role: UserRoleEnum("role").notNull().default("general"),
+  password: text("password").notNull(),
   ...timeStamps,
 });
 
