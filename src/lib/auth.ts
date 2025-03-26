@@ -3,11 +3,14 @@ import jwt from "jsonwebtoken";
 import db from "@/db";
 import Payload from "@/types/payload.type";
 import Role from "@/types/role.type";
+import { UserDeviceModel } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
 type Auth = {
   verify: typeof verify;
   getPayload: typeof getPayload;
   getNullablePayload: typeof getNullablePayload;
+  logout: typeof logout;
 };
 
 export default function getAuth(): Auth {
@@ -15,7 +18,35 @@ export default function getAuth(): Auth {
     verify,
     getPayload,
     getNullablePayload,
+    logout,
   };
+}
+
+async function logout() {
+  const cookie = await cookies();
+
+  cookie.delete("token");
+
+  if (!(await verify([]))) {
+    return;
+  }
+
+  const payload = await getPayload();
+
+  const token = await getToken();
+
+  if (!token) {
+    return;
+  }
+
+  await db
+    .delete(UserDeviceModel)
+    .where(
+      and(
+        eq(UserDeviceModel.userId, payload.id),
+        eq(UserDeviceModel.token, token),
+      ),
+    );
 }
 
 async function verify(acceptedRoles?: Role | Role[]): Promise<boolean> {
