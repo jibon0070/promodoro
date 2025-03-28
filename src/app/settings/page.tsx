@@ -14,7 +14,8 @@ export default async function Settings() {
   }
 
   return (
-    <main className="container mx-auto p-5">
+    <main className="container mx-auto space-y-5 p-5">
+      <Durations defaultValues={durationsDefaultValues} />
     </main>
   );
 }
