@@ -35,3 +35,14 @@ export const UserDeviceModel = pgTable("user_devices", {
   token: varchar("token").notNull().unique(),
   ...timeStamps,
 });
+
+export const DurationsModel = pgTable("durations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => UserModel.id),
+  promodoro: integer("promodoro").notNull(),
+  shortBreak: integer("short_break").notNull(),
+  longBreak: integer("long_break").notNull(),
+  ...timeStamps,
+});
