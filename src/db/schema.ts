@@ -46,3 +46,13 @@ export const DurationsModel = pgTable("durations", {
   longBreak: integer("long_break").notNull(),
   ...timeStamps,
 });
+
+export const OtherSettingModel = pgTable("other_settings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => UserModel.id),
+  promodorosUntilLongBreak: integer("promodoros_until_long_break").notNull(),
+  dailyGoal: integer("daily_goal").notNull(),
+  ...timeStamps,
+});
