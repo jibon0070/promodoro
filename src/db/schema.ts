@@ -56,3 +56,28 @@ export const OtherSettingModel = pgTable("other_settings", {
   dailyGoal: integer("daily_goal").notNull(),
   ...timeStamps,
 });
+
+export const eventNameEnum = pgEnum("name", [
+  "Promodoro",
+  "Short Break",
+  "Long Break",
+]);
+
+export const eventStateEnum = pgEnum("state", [
+  "active",
+  "paused",
+  "completed",
+]);
+
+export const EventModel = pgTable("events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => UserModel.id),
+  name: eventNameEnum("name").notNull(),
+  start: timestamp("start", { mode: "date" }).notNull().defaultNow(),
+  end: timestamp("end", { mode: "date" }),
+  paused: timestamp("paused", { mode: "date" }).notNull().defaultNow(),
+  state: eventStateEnum("state").notNull().default("active"),
+  ...timeStamps,
+});
