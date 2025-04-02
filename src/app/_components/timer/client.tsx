@@ -177,6 +177,11 @@ function Clock({
       } else {
         if (interval) {
           clearInterval(interval);
+          if (currentEvent.name === "Promodoro") {
+            client.invalidateQueries({
+              queryKey: ["get-daily-progress", date],
+            });
+          }
           client.invalidateQueries({ queryKey });
           sendNotification(`${currentEvent.name} is finished`);
         }
