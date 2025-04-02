@@ -2,6 +2,7 @@ import getAuth from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Timer from "./_components/timer/client";
 import { Metadata } from "next";
+import DailyProgress from "./_components/daily-progress/client";
 
 export const metadata: Metadata = {
   title: "Promodoro",
@@ -18,6 +19,7 @@ export default async function Home() {
   return (
     <main className="container mx-auto p-5 space-y-5">
       <Timer />
+      <DailyProgress />
     </main>
   );
 }
