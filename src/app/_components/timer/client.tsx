@@ -182,6 +182,11 @@ function Clock({
       currentDate.getTime() > endDate.getTime() &&
       currentEvent.state === "active"
     ) {
+      if (currentEvent.name === "Promodoro") {
+        client.invalidateQueries({
+          queryKey: ["get-daily-progress", date],
+        });
+      }
       client.invalidateQueries({ queryKey });
       sendNotification(`${currentEvent.name} is finished`);
       beep();
