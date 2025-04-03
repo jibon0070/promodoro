@@ -186,6 +186,7 @@ function Clock({
         client.invalidateQueries({
           queryKey: ["get-daily-progress", date],
         });
+        client.invalidateQueries({ queryKey: ["get-yearly-progress"] });
       }
       client.invalidateQueries({ queryKey });
       sendNotification(`${currentEvent.name} is finished`);
