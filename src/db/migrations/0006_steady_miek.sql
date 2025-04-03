@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "paused" timestamp DEFAULT now() NOT NULL;
