@@ -17,9 +17,6 @@
 /.next/
 /out/
 
-# production
-/build
-
 # misc
 .DS_Store
 *.pem
@@ -41,3 +38,5 @@ yarn-error.log*
 next-env.d.ts
 
 /storage
+
+/build/*.tar
