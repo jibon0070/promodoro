@@ -1,0 +1,26 @@
+services:
+  promodoro-web-prod:
+    restart: always
+    container_name: promodoro-web-prod
+    image: promodoro-web-prod
+    build:
+      context: ../
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8080:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@promodoro-db-prod:5432/db
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - promodoro-db-prod
+
+  promodoro-db-prod:
+    restart: always
+    container_name: promodoro-db-prod
+    image: postgres:17.4-alpine3.21
+    volumes:
+      - ./storage/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=db
