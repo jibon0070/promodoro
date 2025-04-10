@@ -4,6 +4,7 @@ import Timer from "./_components/timer/client";
 import { Metadata } from "next";
 import DailyProgress from "./_components/daily-progress/client";
 import YearlyProgress from "./_components/yearly-progress/client";
+import KeepScreenWake from "./_components/keep-screen-wake/client";
 
 export const metadata: Metadata = {
   title: "Promodoro",
@@ -22,6 +23,7 @@ export default async function Home() {
       <Timer />
       <DailyProgress />
       <YearlyProgress />
+      <KeepScreenWake />
     </main>
   );
 }
