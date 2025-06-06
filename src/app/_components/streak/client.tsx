@@ -27,24 +27,27 @@ export default function Streak() {
   const { currentStreak, longestStreak } = useEngine();
 
   return (
-    !!currentStreak &&
-    !!longestStreak && (
+    (!!currentStreak || !!longestStreak) && (
       <div className="text-center">
-        <div>
-          Current Streak: {currentStreak.count || 0} days | Since{" "}
-          {currentStreak.startAt.toString()}
-        </div>
-        <div>
-          {currentStreak.count === longestStreak.count ? (
-            <span>You currently hold the longest Streak 🎉</span>
-          ) : (
-            <span>
-              Longest Streak: {longestStreak.count || 0} days | Since{" "}
-              {longestStreak.startAt.toString()} to{" "}
-              {longestStreak.endAt.toString()}
-            </span>
-          )}
-        </div>
+        {currentStreak && (
+          <div>
+            Current Streak: {currentStreak.count || 0} days | Since{" "}
+            {currentStreak.startAt.toString()}
+          </div>
+        )}
+        {longestStreak && (
+          <div>
+            {currentStreak?.count === longestStreak.count ? (
+              <span>You currently hold the longest Streak 🎉</span>
+            ) : (
+              <span>
+                Longest Streak: {longestStreak.count || 0} days | Since{" "}
+                {longestStreak.startAt.toString()} to{" "}
+                {longestStreak.endAt.toString()}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     )
   );
