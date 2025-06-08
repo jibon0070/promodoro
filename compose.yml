@@ -27,6 +27,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=db
+    user: "1000:1000"
 
 volumes:
   node_modules:
