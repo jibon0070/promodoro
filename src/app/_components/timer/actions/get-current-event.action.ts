@@ -118,14 +118,22 @@ end
     return event;
   }
 
-  return getNextEvent(event.name, userId, date);
+  return getNextEvent({
+    previousEventName: event.name,
+    userId,
+    date,
+  });
 }
 
-async function getNextEvent(
-  previousEventName: Event["name"],
-  userId: number,
-  date: Date,
-): Promise<Event> {
+async function getNextEvent({
+  previousEventName,
+  userId,
+  date,
+}: {
+  previousEventName: Event["name"];
+  userId: number;
+  date: Date;
+}): Promise<Event> {
   const until: number = await db.query.OtherSettingModel.findFirst({
     where: (model, { eq }) => eq(model.userId, userId),
     columns: { promodorosUntilLongBreak: true },
