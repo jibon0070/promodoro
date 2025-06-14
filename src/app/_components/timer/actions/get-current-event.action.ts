@@ -59,7 +59,7 @@ async function validateUser(auth: ReturnType<typeof getAuth>) {
 }
 
 async function getEvent(userId: number, date: Date): Promise<Event> {
-  await closeOldEvents({ userId, date });
+  await closeOldEvents(userId, date);
 
   const event: Event | undefined = await db
     .select({
@@ -205,13 +205,7 @@ async function createEvent({
   });
 }
 
-async function closeOldEvents({
-  userId,
-  date,
-}: {
-  userId: number;
-  date: Date;
-}) {
+async function closeOldEvents(userId: number, date: Date) {
   const durations: {
     promodoro: number;
     shortBreak: number;
