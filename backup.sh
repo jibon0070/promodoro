@@ -1,3 +1,4 @@
+#!/bin/bash
 server=promodoro
 folder="~/promodoro"
 backupname="backup-$(date +%Y-%m-%d-%H:%M).zip"
