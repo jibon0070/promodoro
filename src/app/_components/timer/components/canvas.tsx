@@ -20,11 +20,15 @@ const drawClock = ({
   size: number;
   timeDeg: number;
 }) => {
+  ctx.save();
+  ctx.fillStyle = "red";
   ctx.beginPath();
   ctx.arc(x, y, size, degToRadiant(-90), degToRadiant(-90 + timeDeg), false);
   ctx.lineTo(x, y);
   ctx.closePath();
+  ctx.fillStyle = "black";
   ctx.fill();
+  ctx.restore();
 };
 
 function degToRadiant(deg: number) {
@@ -83,10 +87,12 @@ export default function Canvas({
   durationInMinutes,
   endDate,
   currentDate,
+  isPaused,
 }: {
   durationInMinutes: number;
   endDate: Date;
   currentDate: Date;
+  isPaused: boolean;
 }) {
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement | null | undefined) => {
@@ -144,9 +150,27 @@ export default function Canvas({
         size: clockRadious,
         timeDeg: timeDeg,
       });
+
+      if (isPaused) drawPauseIcon(ctx);
     },
-    [currentDate, durationInMinutes, endDate],
+    [currentDate, durationInMinutes, endDate, isPaused],
   );
 
   return <canvas className="size-full" ref={canvasRef} />;
+}
+
+function drawPauseIcon(ctx: CanvasRenderingContext2D) {
+  const canvasSize = ctx.canvas.width;
+  const height = canvasSize * 0.5;
+  const width = canvasSize * 0.15;
+  const gap = canvasSize * 0.075;
+
+  const leftOffset = canvasSize / 2 - (width * 2 + gap) / 2;
+  const topOffset = canvasSize / 2 - height / 2;
+
+  ctx.save();
+  ctx.fillStyle = "gray";
+  ctx.fillRect(leftOffset, topOffset, width, height);
+  ctx.fillRect(leftOffset + width + gap, topOffset, width, height);
+  ctx.restore();
 }
