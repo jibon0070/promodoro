@@ -31,9 +31,12 @@ export default async function getCurrentEventAction(
 
     const payload = await auth.getPayload();
 
-    const data = parseData(uData);
+    const timezoneOffset = parseData(uData);
 
-    const event = await getEvent(payload.id, data.date);
+    const date = new Date();
+    date.setHours(0, timezoneOffset, 0, 0);
+
+    const event = await getEvent(payload.id, date);
 
     return { success: true, event };
   } catch (e) {
@@ -170,7 +173,7 @@ async function getNextEvent({
 
 function parseData(uData: unknown) {
   try {
-    return z.object({ date: z.coerce.date() }).parse(uData);
+    return z.coerce.number().parse(uData);
   } catch {
     throw new SkipError();
   }

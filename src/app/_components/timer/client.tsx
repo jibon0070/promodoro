@@ -22,7 +22,7 @@ export default function Timer() {
         return Promise.resolve(null);
       }
 
-      return getCurrentEventAction({ date });
+      return getCurrentEventAction(date.getTimezoneOffset());
     },
   });
 
