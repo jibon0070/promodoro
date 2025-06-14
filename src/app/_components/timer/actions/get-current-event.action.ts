@@ -236,13 +236,11 @@ async function closeOldEvents({
         duration = durations.longBreak;
     }
 
-    const durationMinutes = `${duration} minutes`;
-
     await db
       .update(EventModel)
       .set({
         state: "completed",
-        end: sql`${EventModel.start}::timestamp + ${durationMinutes}::interval`,
+        end: sql`${EventModel.start}::timestamp + ${duration + " minutes"}::interval`,
       })
       .where(
         and(
