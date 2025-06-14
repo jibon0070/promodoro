@@ -259,6 +259,7 @@ function Clock({
             currentDate={currentDate}
             endDate={endDate}
             durationInMinutes={currentEvent.duration}
+            isPaused={currentEvent.state === "paused"}
           />
         )}
       </button>
