@@ -4,7 +4,7 @@ import db from "@/db";
 import { DurationsModel, EventModel } from "@/db/schema";
 import getAuth from "@/lib/auth";
 import ResponseWraper from "@/types/response-wraper.type";
-import { and, count, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, lte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export type Event = {
@@ -257,5 +257,7 @@ async function closeOldEvents({
   //delete paused events
   await db
     .delete(EventModel)
-    .where(and(eq(EventModel.state, "paused"), lt(EventModel.createdAt, date)));
+    .where(
+      and(ne(EventModel.state, "completed"), lt(EventModel.createdAt, date)),
+    );
 }
