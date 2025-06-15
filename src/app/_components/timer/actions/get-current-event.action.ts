@@ -217,6 +217,13 @@ async function createEvent({
 }
 
 async function closeOldEvents(userId: number, date: Date) {
+  // delete not completed events
+  await db
+    .delete(EventModel)
+    .where(
+      and(ne(EventModel.state, "completed"), lt(EventModel.createdAt, date)),
+    );
+
   const durations: {
     promodoro: number;
     shortBreak: number;
@@ -226,7 +233,7 @@ async function closeOldEvents(userId: number, date: Date) {
     columns: { promodoro: true, shortBreak: true, longBreak: true },
   }).then((row) => row || { promodoro: 25, shortBreak: 5, longBreak: 15 });
 
-  //close active events
+  // complete active events
   for (const name of EventModel.name.enumValues) {
     let duration: number;
 
@@ -258,11 +265,4 @@ async function closeOldEvents(userId: number, date: Date) {
         ),
       );
   }
-
-  //delete paused events
-  await db
-    .delete(EventModel)
-    .where(
-      and(ne(EventModel.state, "completed"), lt(EventModel.createdAt, date)),
-    );
 }
