@@ -104,7 +104,7 @@ end
         gte(EventModel.createdAt, new Date(date)),
         lt(
           EventModel.createdAt,
-          new Date(new Date(date).getTime() + 1000 * 60 * 60 * 24),
+          new Date(date.getTime() + 1000 * 60 * 60 * 24),
         ),
       ),
     )
