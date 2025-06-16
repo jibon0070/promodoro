@@ -187,7 +187,10 @@ function Clock({
           queryKey: ["get-daily-progress", date],
         });
         client.invalidateQueries({ queryKey: ["get-yearly-progress"] });
+        client.invalidateQueries({ queryKey: ["currentWorkingTime"] });
+        client.invalidateQueries({ queryKey: ["longestWorkingTime"] });
       }
+
       client.invalidateQueries({ queryKey });
       sendNotification(`${currentEvent.name} is finished`);
       beep();

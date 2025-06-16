@@ -6,6 +6,7 @@ import DailyProgress from "./_components/daily-progress/client";
 import YearlyProgress from "./_components/yearly-progress/client";
 import KeepScreenWake from "./_components/keep-screen-wake/client";
 import Streak from "./_components/streak/client";
+import Session from "./_components/session/client";
 
 export const metadata: Metadata = {
   title: "Promodoro",
@@ -23,6 +24,7 @@ export default async function Home() {
     <main className="container mx-auto p-5 space-y-5">
       <Timer />
       <DailyProgress />
+      <Session />
       <Streak />
       <YearlyProgress />
       <KeepScreenWake />
