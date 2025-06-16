@@ -1,11 +1,13 @@
 "use server";
 
 import db from "@/db";
-import { DurationsModel, EventModel } from "@/db/schema";
+import { DurationsModel, EventModel, OtherSettingModel } from "@/db/schema";
 import getAuth from "@/lib/auth";
 import ResponseWraper from "@/types/response-wraper.type";
-import { and, count, desc, eq, gte, lt, lte, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
+
+type Name = (typeof EventModel.name.enumValues)[number];
 
 export type Event = {
   id: number;
@@ -33,10 +35,7 @@ export default async function getCurrentEventAction(
 
     const timezoneOffset = parseData(uData);
 
-    const date = new Date();
-    date.setHours(0, timezoneOffset, 0, 0);
-
-    const event = await getEvent(payload.id, date);
+    const event = await getEvent(payload.id, timezoneOffset);
 
     return { success: true, event };
   } catch (e) {
@@ -61,181 +60,159 @@ async function validateUser(auth: ReturnType<typeof getAuth>) {
   }
 }
 
-async function getEvent(userId: number, date: Date): Promise<Event> {
-  await closeOldEvents(userId, date);
+async function getEvent(
+  userId: number,
+  timezoneOffset: number,
+): Promise<Event> {
+  await closeEvents(userId, timezoneOffset);
 
-  const event: Event | undefined = await db
+  const today = new Date();
+  today.setHours(24, 0, 0, 0);
+  today.setMinutes(timezoneOffset);
+
+  const event: Event | null = await db
     .select({
+      date: EventModel.createdAt,
+      duration: sql<number>`
+        CASE
+          WHEN ${EventModel.name} = 'Promodoro' THEN
+            CASE
+              WHEN ${DurationsModel.promodoro} IS NULL THEN 25
+              ELSE ${DurationsModel.promodoro}
+            END
+          WHEN ${EventModel.name} = 'Short Break' THEN
+            CASE
+              WHEN ${DurationsModel.shortBreak} IS NULL THEN 5
+              ELSE ${DurationsModel.shortBreak}
+            END
+          ELSE 
+            CASE
+              WHEN ${DurationsModel.longBreak} IS NULL THEN 15
+              ELSE ${DurationsModel.longBreak}
+            END
+        END
+`,
       id: EventModel.id,
       name: EventModel.name,
-      duration: sql<number>`
-case
-  when ${EventModel.name} = 'Promodoro'
-  then
-    case
-      when ${DurationsModel.promodoro} is null
-      then 25
-      else ${DurationsModel.promodoro}
-    end
-  when ${EventModel.name} = 'Short Break'
-  then
-    case
-      when ${DurationsModel.shortBreak} is null
-      then 5
-      else ${DurationsModel.shortBreak}
-    end
-  else
-    case
-      when ${DurationsModel.longBreak} is null
-      then 15
-      else ${DurationsModel.longBreak}
-    end
-end
-`,
       state: EventModel.state,
       start: EventModel.start,
       paused: EventModel.paused,
     })
     .from(EventModel)
+    .where(and(eq(EventModel.userId, userId), gte(EventModel.createdAt, today)))
     .leftJoin(DurationsModel, eq(DurationsModel.userId, userId))
-    .where(
-      and(
-        eq(EventModel.userId, userId),
-        gte(EventModel.createdAt, new Date(date)),
-        lt(
-          EventModel.createdAt,
-          new Date(date.getTime() + 1000 * 60 * 60 * 24),
-        ),
-      ),
-    )
     .orderBy(desc(EventModel.id))
-    .then((row) => row.at(0));
+    .then((row) => row.at(0) || null);
 
   if (!event) {
-    await createEvent({ userId, name: "Promodoro" });
-
-    return await getEvent(userId, date);
+    await createEvent(userId, "Promodoro");
+    return await getEvent(userId, timezoneOffset);
   }
 
   if (event.state !== "completed") {
     return event;
   }
 
-  return getNextEvent({
-    previousEventName: event.name,
+  const name = await getNextEventName({
+    previousName: event.name,
     userId,
-    date,
+    timezoneOffset,
   });
+
+  await createEvent(userId, name);
+
+  return await getEvent(userId, timezoneOffset);
 }
 
-async function getNextEvent({
-  previousEventName,
+async function getNextEventName({
+  previousName,
+  timezoneOffset,
   userId,
-  date,
 }: {
-  previousEventName: Event["name"];
+  previousName: Name;
   userId: number;
-  date: Date;
-}): Promise<Event> {
-  const until: number = await db.query.OtherSettingModel.findFirst({
-    where: (model, { eq }) => eq(model.userId, userId),
-    columns: { promodorosUntilLongBreak: true },
-  }).then((row) => row?.promodorosUntilLongBreak || 4);
+  timezoneOffset: number;
+}): Promise<Name> {
+  const today = new Date();
+  today.setHours(24, 0, 0, 0);
+  today.setMinutes(timezoneOffset);
 
-  const totalCompletedPromodoro: number = await db
-    .select({ total: count(EventModel.id) })
+  const completedPromodoroCount: number = await db
+    .select({
+      total: count(EventModel.id),
+    })
     .from(EventModel)
     .where(
       and(
         eq(EventModel.userId, userId),
+        gte(EventModel.createdAt, today),
         eq(EventModel.name, "Promodoro"),
-        eq(EventModel.state, "completed"),
-        gte(EventModel.createdAt, date),
-        lt(
-          EventModel.createdAt,
-          new Date(date.getTime() + 1000 * 60 * 60 * 24),
-        ),
       ),
     )
     .then((row) => row.at(0)?.total || 0);
 
-  const name =
-    previousEventName !== "Promodoro"
-      ? "Promodoro"
-      : !(totalCompletedPromodoro % until)
-        ? "Long Break"
-        : "Short Break";
+  const until: number = await db
+    .select({
+      until: OtherSettingModel.promodorosUntilLongBreak,
+    })
+    .from(OtherSettingModel)
+    .where(eq(OtherSettingModel.userId, userId))
+    .then((row) => row.at(0)?.until || 4);
 
-  await createEvent({ name, userId });
+  console.log(completedPromodoroCount, until, completedPromodoroCount % until);
 
-  return await getEvent(userId, date);
+  return ["Short Break", "Long Break"].includes(previousName)
+    ? "Promodoro"
+    : completedPromodoroCount % until === 0
+      ? "Long Break"
+      : "Short Break";
 }
 
-function parseData(uData: unknown) {
-  try {
-    return z.coerce.number().parse(uData);
-  } catch {
-    throw new SkipError();
-  }
-}
-
-async function createEvent({
-  name,
-  userId,
-}: {
-  name: Event["name"];
-  userId: number;
-}) {
-  const duration: { promodoro: number; shortBreak: number; longBreak: number } =
-    await db.query.DurationsModel.findFirst({
-      where: (model, { eq }) => eq(model.userId, userId),
-      columns: { promodoro: true, shortBreak: true, longBreak: true },
-    }).then((row) => row || { promodoro: 25, shortBreak: 5, longBreak: 15 });
-
-  let addedTimeInMiliSeconds = 0;
-
-  switch (name) {
-    case "Promodoro":
-      addedTimeInMiliSeconds = duration.promodoro * 60 * 1000;
-      break;
-    case "Short Break":
-      addedTimeInMiliSeconds = duration.shortBreak * 60 * 1000;
-      break;
-    default:
-      addedTimeInMiliSeconds = duration.longBreak * 60 * 1000;
-  }
-
-  const date = new Date();
-
+async function createEvent(userId: number, name: Name) {
   await db.insert(EventModel).values({
     name,
-    userId,
     state: "paused",
-    start: date,
-    end: new Date(date.getTime() + addedTimeInMiliSeconds),
+    userId,
   });
 }
 
-async function closeOldEvents(userId: number, date: Date) {
-  // delete not completed events
+async function closeEvents(userId: number, timezoneOffset: number) {
+  const today = new Date();
+  today.setHours(24, 0, 0, 0);
+  today.setMinutes(timezoneOffset);
+
+  // delete previous day events
   await db
     .delete(EventModel)
     .where(
-      and(ne(EventModel.state, "completed"), lt(EventModel.createdAt, date)),
+      and(
+        lt(EventModel.createdAt, today),
+        ne(EventModel.state, "completed"),
+        eq(EventModel.userId, userId),
+      ),
     );
 
   const durations: {
     promodoro: number;
     shortBreak: number;
     longBreak: number;
-  } = await db.query.DurationsModel.findFirst({
-    where: (model, { eq }) => eq(model.userId, userId),
-    columns: { promodoro: true, shortBreak: true, longBreak: true },
-  }).then((row) => row || { promodoro: 25, shortBreak: 5, longBreak: 15 });
+  } = await db
+    .select({
+      promodoro: DurationsModel.promodoro,
+      shortBreak: DurationsModel.shortBreak,
+      longBreak: DurationsModel.longBreak,
+    })
+    .from(DurationsModel)
+    .where(eq(DurationsModel.userId, userId))
+    .then(
+      (row) => row.at(0) || { promodoro: 25, shortBreak: 5, longBreak: 15 },
+    );
 
-  // complete active events
+  const currentDate = new Date();
+
+  // close completed events
   for (const name of EventModel.name.enumValues) {
-    let duration: number;
+    let duration = 0;
 
     switch (name) {
       case "Promodoro":
@@ -246,23 +223,33 @@ async function closeOldEvents(userId: number, date: Date) {
         break;
       default:
         duration = durations.longBreak;
+        break;
     }
 
     await db
       .update(EventModel)
       .set({
         state: "completed",
-        end: sql`${EventModel.start}::timestamp + ${duration + " minutes"}::interval`,
+        end: sql`${EventModel.start} + ${duration + " minutes"}::interval`,
       })
       .where(
         and(
-          eq(EventModel.state, "active"),
           eq(EventModel.name, name),
-          lte(
+          lt(
             EventModel.start,
-            new Date(new Date().getTime() - duration * 60 * 1000),
+            new Date(currentDate.getTime() - duration * 60 * 1000),
           ),
+          eq(EventModel.state, "active"),
+          eq(EventModel.userId, userId),
         ),
       );
+  }
+}
+
+function parseData(uData: unknown) {
+  try {
+    return z.coerce.number().parse(uData);
+  } catch {
+    throw new SkipError();
   }
 }
