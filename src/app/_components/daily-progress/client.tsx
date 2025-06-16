@@ -14,8 +14,8 @@ export default function DailyProgress() {
 
   useEffect(() => {
     const date = new Date();
-
-    setDate(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+    date.setHours(0, 0, 0, 0);
+    setDate(date);
   }, []);
 
   const query = useQuery({

@@ -15,6 +15,7 @@ export default function Timer() {
   const [date, setDate] = useState<Date | undefined>();
 
   const queryKey = ["get-current-event", date];
+
   const query = useQuery({
     queryKey,
     queryFn: () => {
@@ -177,6 +178,9 @@ function Clock({
     if (!endDate || !currentDate) {
       return;
     }
+
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
 
     if (
       currentDate.getTime() > endDate.getTime() &&
