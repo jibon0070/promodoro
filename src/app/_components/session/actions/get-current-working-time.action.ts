@@ -20,7 +20,7 @@ export default async function getCurrentSessionAction(
     const timezoneOffset = parseData(uData);
 
     const date = new Date();
-    date.setHours(0, timezoneOffset, 0, 0);
+    date.setHours(24, timezoneOffset, 0, 0);
 
     const payload = await auth.getPayload();
 
