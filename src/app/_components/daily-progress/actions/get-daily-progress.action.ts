@@ -18,13 +18,16 @@ export default async function getdailyProgress(uData: unknown): Promise<
     const auth = getAuth();
 
     await validateUser(auth);
-    const date = parseData(uData);
+    const timezoneOffset = parseData(uData);
 
     const payload = await auth.getPayload();
 
     const { dailyGoal, promodorosUntilLongBreak } = await getOtherSettings(
       payload.id,
     );
+
+    const date = new Date();
+    date.setHours(24, timezoneOffset, 0, 0);
 
     const currentPromodoros = await getCurrentPromodoros(payload.id, date);
 
@@ -59,7 +62,7 @@ async function validateUser(auth: ReturnType<typeof getAuth>) {
 
 function parseData(data: unknown) {
   try {
-    return z.coerce.date().parse(data);
+    return z.coerce.number().parse(data);
   } catch {
     throw new SkipError();
   }

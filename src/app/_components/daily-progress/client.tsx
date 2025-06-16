@@ -10,17 +10,10 @@ export default function DailyProgress() {
   const [dailyGoal, setDailyGoal] = useState(8);
   const [promodorosUntilLongBreak, setPromodorosUntilLongBreak] = useState(4);
   const [currentPromodoros, setCurrentPromodoros] = useState(0);
-  const [date, setDate] = useState<Date | undefined>();
-
-  useEffect(() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    setDate(date);
-  }, []);
 
   const query = useQuery({
-    queryKey: ["get-daily-progress", date],
-    queryFn: () => getDailyProgress(date),
+    queryKey: ["get-daily-progress"],
+    queryFn: () => getDailyProgress(new Date().getTimezoneOffset()),
   });
 
   useEffect(() => {
