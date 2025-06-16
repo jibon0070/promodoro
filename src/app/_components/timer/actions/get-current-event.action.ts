@@ -73,20 +73,20 @@ case
   when ${EventModel.name} = 'Promodoro'
   then
     case
-      when ${DurationsModel.promodoro} = null
+      when ${DurationsModel.promodoro} is null
       then 25
       else ${DurationsModel.promodoro}
     end
   when ${EventModel.name} = 'Short Break'
   then
     case
-      when ${DurationsModel.shortBreak} = null
+      when ${DurationsModel.shortBreak} is null
       then 5
       else ${DurationsModel.shortBreak}
     end
   else
     case
-      when ${DurationsModel.longBreak} = null
+      when ${DurationsModel.longBreak} is null
       then 15
       else ${DurationsModel.longBreak}
     end
