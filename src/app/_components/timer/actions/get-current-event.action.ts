@@ -159,8 +159,6 @@ async function getNextEventName({
     .where(eq(OtherSettingModel.userId, userId))
     .then((row) => row.at(0)?.until || 4);
 
-  console.log(completedPromodoroCount, until, completedPromodoroCount % until);
-
   return ["Short Break", "Long Break"].includes(previousName)
     ? "Promodoro"
     : completedPromodoroCount % until === 0
