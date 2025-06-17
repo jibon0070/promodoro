@@ -61,9 +61,7 @@ function parseData(data: unknown): number {
 function getStartDate(timezoneOffset: number): Date {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 365);
-  startDate.setHours(0, 0, 0, 0);
-  startDate.setDate(startDate.getDate() - startDate.getDay() - 1);
-  startDate.setMinutes(timezoneOffset);
+  startDate.setHours(24, timezoneOffset, 0, 0);
 
   return startDate;
 }
