@@ -67,7 +67,7 @@ async function getEvent(
   await closeEvents(userId, timezoneOffset);
 
   const today = new Date();
-  today.setHours(24, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
   today.setMinutes(timezoneOffset);
 
   const event: Event | null = await db
@@ -134,7 +134,7 @@ async function getNextEventName({
   timezoneOffset: number;
 }): Promise<Name> {
   const today = new Date();
-  today.setHours(24, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
   today.setMinutes(timezoneOffset);
 
   const completedPromodoroCount: number = await db
@@ -176,7 +176,7 @@ async function createEvent(userId: number, name: Name) {
 
 async function closeEvents(userId: number, timezoneOffset: number) {
   const today = new Date();
-  today.setHours(24, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
   today.setMinutes(timezoneOffset);
 
   // delete previous day events
