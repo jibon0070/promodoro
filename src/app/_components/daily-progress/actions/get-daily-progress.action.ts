@@ -4,7 +4,7 @@ import db from "@/db";
 import { EventModel } from "@/db/schema";
 import getAuth from "@/lib/auth";
 import ResponseWraper from "@/types/response-wraper.type";
-import { and, count, eq, gte, lt } from "drizzle-orm";
+import { and, count, eq, gte, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export default async function getdailyProgress(uData: unknown): Promise<
@@ -26,10 +26,10 @@ export default async function getdailyProgress(uData: unknown): Promise<
       payload.id,
     );
 
-    const date = new Date();
-    date.setHours(0, timezoneOffset, 0, 0);
-
-    const currentPromodoros = await getCurrentPromodoros(payload.id, date);
+    const currentPromodoros = await getCurrentPromodoros(
+      payload.id,
+      timezoneOffset,
+    );
 
     return {
       success: true,
@@ -77,21 +77,32 @@ async function getOtherSettings(userId: number) {
 
 async function getCurrentPromodoros(
   userId: number,
-  date: Date,
+  timezoneOffset: number,
 ): Promise<number> {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - timezoneOffset);
+  console.log(date, timezoneOffset);
+  date.setHours(0, 0, 0, 0);
+
+  const createdAtQuery = sql`${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval`;
+
   return await db
-    .select({ total: count(EventModel.id) })
+    .select(
+      { total: count(EventModel.id) } /*{
+        date: createdAtQuery,
+        start: EventModel.createdAt,
+        end: EventModel.end,
+        time: sql`${EventModel.end} - ${EventModel.createdAt}`,
+      }*/,
+    )
     .from(EventModel)
     .where(
       and(
         eq(EventModel.state, "completed"),
         eq(EventModel.name, "Promodoro"),
         eq(EventModel.userId, userId),
-        gte(EventModel.createdAt, date),
-        lt(
-          EventModel.createdAt,
-          new Date(date.getTime() + 1000 * 60 * 60 * 24),
-        ),
+        gte(createdAtQuery, date),
+        lt(createdAtQuery, new Date(date.getTime() + 1000 * 60 * 60 * 24)),
       ),
     )
     .then((row) => row.at(0)?.total || 0);
