@@ -4,7 +4,7 @@ import db from "@/db";
 import { EventModel } from "@/db/schema";
 import getAuth from "@/lib/auth";
 import ResponseWraper from "@/types/response-wraper.type";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import eventIdValidator from "../validators/event-id.validator";
 
@@ -71,16 +71,15 @@ async function toggleResumePause(id: number) {
     throw new SkipError();
   }
 
-  const diff = event.paused.getTime() - event.start.getTime();
-
-  const start = new Date(new Date().getTime() - diff);
-
   await db
     .update(EventModel)
     .set({
       state: event.state === "paused" ? "active" : "paused",
-      start: event.state === "paused" ? start : undefined,
-      paused: new Date(),
+      start:
+        event.state === "paused"
+          ? sql`(CURRENT_TIMESTAMP - (${EventModel.paused} - ${EventModel.start})::interval)::timestamp`
+          : sql`CURRENT_TIMESTAMP`,
+      paused: sql`CURRENT_TIMESTAMP`,
     })
     .where(eq(EventModel.id, id));
 }
