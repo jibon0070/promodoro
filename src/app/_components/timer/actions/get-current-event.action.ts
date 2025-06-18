@@ -35,7 +35,10 @@ export default async function getCurrentEventAction(
 
     const timezoneOffset = parseData(uData);
 
-    const event = await getEvent(payload.id, timezoneOffset);
+    const date = new Date();
+    date.setHours(0, timezoneOffset, 0, 0);
+
+    const event = await getEvent(payload.id, date);
 
     return { success: true, event };
   } catch (e) {
@@ -60,15 +63,8 @@ async function validateUser(auth: ReturnType<typeof getAuth>) {
   }
 }
 
-async function getEvent(
-  userId: number,
-  timezoneOffset: number,
-): Promise<Event> {
-  await closeEvents(userId, timezoneOffset);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  today.setMinutes(timezoneOffset);
+async function getEvent(userId: number, date: Date): Promise<Event> {
+  await closeEvents(userId, date);
 
   const event: Event | null = await db
     .select({
@@ -99,14 +95,14 @@ async function getEvent(
       paused: EventModel.paused,
     })
     .from(EventModel)
-    .where(and(eq(EventModel.userId, userId), gte(EventModel.createdAt, today)))
+    .where(and(eq(EventModel.userId, userId), gte(EventModel.createdAt, date)))
     .leftJoin(DurationsModel, eq(DurationsModel.userId, userId))
     .orderBy(desc(EventModel.id))
     .then((row) => row.at(0) || null);
 
   if (!event) {
     await createEvent(userId, "Promodoro");
-    return await getEvent(userId, timezoneOffset);
+    return await getEvent(userId, date);
   }
 
   if (event.state !== "completed") {
@@ -116,27 +112,23 @@ async function getEvent(
   const name = await getNextEventName({
     previousName: event.name,
     userId,
-    timezoneOffset,
+    date,
   });
 
   await createEvent(userId, name);
 
-  return await getEvent(userId, timezoneOffset);
+  return await getEvent(userId, date);
 }
 
 async function getNextEventName({
   previousName,
-  timezoneOffset,
+  date,
   userId,
 }: {
   previousName: Name;
   userId: number;
-  timezoneOffset: number;
+  date: Date;
 }): Promise<Name> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  today.setMinutes(timezoneOffset);
-
   const completedPromodoroCount: number = await db
     .select({
       total: count(EventModel.id),
@@ -145,7 +137,7 @@ async function getNextEventName({
     .where(
       and(
         eq(EventModel.userId, userId),
-        gte(EventModel.createdAt, today),
+        gte(EventModel.createdAt, date),
         eq(EventModel.name, "Promodoro"),
       ),
     )
@@ -174,17 +166,13 @@ async function createEvent(userId: number, name: Name) {
   });
 }
 
-async function closeEvents(userId: number, timezoneOffset: number) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  today.setMinutes(timezoneOffset);
-
+async function closeEvents(userId: number, date: Date) {
   // delete previous day events
   await db
     .delete(EventModel)
     .where(
       and(
-        lt(EventModel.createdAt, today),
+        lt(EventModel.createdAt, date),
         ne(EventModel.state, "completed"),
         eq(EventModel.userId, userId),
       ),
