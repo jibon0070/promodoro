@@ -6,7 +6,7 @@ backupname="backup-$(date +%Y-%m-%d-%H:%M).zip"
 ssh $server <<EOF
 cd $folder
 docker compose down
-zip -r $backupname storage
+zip -r -0 $backupname storage
 docker compose up -d
 EOF
 
