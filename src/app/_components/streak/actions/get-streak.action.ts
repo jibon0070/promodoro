@@ -33,6 +33,7 @@ export default async function getStreakAction(minuteOffset: number): Promise<
     return { success: false, message: "Internal Server Error." };
   }
 }
+
 async function validateUser(auth: ReturnType<typeof getAuth>): Promise<void> {
   if (!(await auth.verify([]))) {
     throw new Error("Unauthorized");

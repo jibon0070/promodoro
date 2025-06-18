@@ -69,10 +69,11 @@ async function getLongestSession(
   timezoneOffset: number,
 ): Promise<{ time: number; date: Date | null }> {
   const dateQuery =
-    sql<Date>`(${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval)::date`.as(
+    sql<Date>`(${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval)::date::timestamp`.as(
       "date",
     );
-  const timeQuery = sql<number>`sum((extract(epoch from ${EventModel.end} - ${EventModel.start}) / 60)::int)::int`;
+  const timeQuery = sql<number>`sum(extract(epoch from ${EventModel.end} - ${EventModel.start}) / 60)::int`;
+
   return await db
     .select({
       date: dateQuery,
