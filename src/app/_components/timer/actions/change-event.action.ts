@@ -6,7 +6,7 @@ import { z } from "zod";
 import eventIdValidator from "../validators/event-id.validator";
 import db from "@/db";
 import { EventModel } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const defaultError = { success: false, message: "Internal server error." };
 
@@ -83,13 +83,11 @@ async function changeEvent(id: number) {
       throw new SkipError();
   }
 
-  const date = new Date();
-
   await db
     .update(EventModel)
     .set({
-      start: date,
-      paused: date,
+      start: sql`CURRENT_TIMESTAMP`,
+      paused: sql`CURRENT_TIMESTAMP`,
       state: "paused",
       name,
     })
