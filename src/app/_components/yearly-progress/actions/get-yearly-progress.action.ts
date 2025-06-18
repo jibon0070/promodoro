@@ -61,7 +61,8 @@ function parseData(data: unknown): number {
 function getStartDate(timezoneOffset: number): Date {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 365);
-  startDate.setHours(24, timezoneOffset, 0, 0);
+  startDate.setMinutes(startDate.getMinutes() - timezoneOffset);
+  startDate.setHours(0, 0, 0, 0);
 
   return startDate;
 }
@@ -75,53 +76,47 @@ async function getEventsInfo(
   min: number;
   max: number;
 }> {
-  const offsetWithMinutes = `${timezoneOffset} minutes`;
-
-  const dateQuery =
-    sql<string>`(${EventModel.createdAt} - ${offsetWithMinutes}::interval)::date`.as(
-      "date",
-    );
-
-  const eventQuery = db
+  const query = db
     .select({
-      date: dateQuery,
+      date: sql<Date>`(${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval)::date`.as(
+        "dateQuery",
+      ),
       minutes:
-        sql<number>`sum((extract(epoch from (${EventModel.end} - ${EventModel.start})::interval)/60)::integer)::integer`.as(
-          "minutes",
+        sql<number>`extract(epoch from ${EventModel.end} - ${EventModel.start})::int / 60`.as(
+          "minutesQuery",
         ),
     })
     .from(EventModel)
     .where(
       and(
-        eq(EventModel.name, "Promodoro"),
-        eq(EventModel.state, "completed"),
-        gte(EventModel.createdAt, startDate),
         eq(EventModel.userId, userId),
+        eq(EventModel.state, "completed"),
+        eq(EventModel.state, "completed"),
       ),
     )
-    .groupBy(dateQuery)
-    .as("eventQuery");
+    .as(`query`);
 
-  const events = await db.select().from(eventQuery);
-
-  const maxQuery = sql<number>`max(${eventQuery.minutes})`;
-  const minQuery = sql<number>`min(${eventQuery.minutes})`;
-
-  const { min, max } = await db
+  const eventsQuery = db
     .select({
-      min: sql<number>`
-        case
-          when ${minQuery} = ${maxQuery}
-          then 0
-          else ${minQuery}
-        end`,
-      max: maxQuery,
+      date: sql<string>`${query.date}`.as("dateQuery2"),
+      minutes: sql<number>`sum(${query.minutes})::int`.as("minutesQuery2"),
     })
-    .from(eventQuery)
-    .then((row) => row.at(0) || { min: 0, max: 0 });
-  return {
-    events,
-    min,
-    max,
-  };
+    .from(query)
+    .where(gte(query.date, startDate))
+    .groupBy(query.date)
+    .as("eventsQuery");
+
+  const [events, min, max] = await Promise.all([
+    db.select().from(eventsQuery),
+    db
+      .select({ min: sql<number>`min(${eventsQuery.minutes})` })
+      .from(eventsQuery)
+      .then((r) => r.at(0)?.min || 0),
+    db
+      .select({ max: sql<number>`max(${eventsQuery.minutes})` })
+      .from(eventsQuery)
+      .then((r) => r.at(0)?.max || 0),
+  ]);
+
+  return { events, min, max };
 }
