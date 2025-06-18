@@ -35,10 +35,7 @@ export default async function getCurrentEventAction(
 
     const timezoneOffset = parseData(uData);
 
-    const date = new Date();
-    date.setHours(0, timezoneOffset, 0, 0);
-
-    const event = await getEvent(payload.id, date);
+    const event = await getEvent(payload.id, timezoneOffset);
 
     return { success: true, event };
   } catch (e) {
@@ -63,8 +60,15 @@ async function validateUser(auth: ReturnType<typeof getAuth>) {
   }
 }
 
-async function getEvent(userId: number, date: Date): Promise<Event> {
-  await closeEvents(userId, date);
+async function getEvent(
+  userId: number,
+  timezoneOffset: number,
+): Promise<Event> {
+  await closeEvents(userId, timezoneOffset);
+
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - timezoneOffset);
+  date.setHours(0, 0, 0, 0);
 
   const event: Event | null = await db
     .select({
@@ -95,14 +99,22 @@ async function getEvent(userId: number, date: Date): Promise<Event> {
       paused: EventModel.paused,
     })
     .from(EventModel)
-    .where(and(eq(EventModel.userId, userId), gte(EventModel.createdAt, date)))
+    .where(
+      and(
+        eq(EventModel.userId, userId),
+        gte(
+          sql`${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval`,
+          date,
+        ),
+      ),
+    )
     .leftJoin(DurationsModel, eq(DurationsModel.userId, userId))
     .orderBy(desc(EventModel.id))
     .then((row) => row.at(0) || null);
 
   if (!event) {
     await createEvent(userId, "Promodoro");
-    return await getEvent(userId, date);
+    return await getEvent(userId, timezoneOffset);
   }
 
   if (event.state !== "completed") {
@@ -112,23 +124,27 @@ async function getEvent(userId: number, date: Date): Promise<Event> {
   const name = await getNextEventName({
     previousName: event.name,
     userId,
-    date,
+    timezoneOffset,
   });
 
   await createEvent(userId, name);
 
-  return await getEvent(userId, date);
+  return await getEvent(userId, timezoneOffset);
 }
 
 async function getNextEventName({
   previousName,
-  date,
+  timezoneOffset,
   userId,
 }: {
   previousName: Name;
   userId: number;
-  date: Date;
+  timezoneOffset: number;
 }): Promise<Name> {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - timezoneOffset);
+  date.setHours(0, 0, 0, 0);
+
   const completedPromodoroCount: number = await db
     .select({
       total: count(EventModel.id),
@@ -137,7 +153,10 @@ async function getNextEventName({
     .where(
       and(
         eq(EventModel.userId, userId),
-        gte(EventModel.createdAt, date),
+        gte(
+          sql`${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval`,
+          date,
+        ),
         eq(EventModel.name, "Promodoro"),
       ),
     )
@@ -166,13 +185,20 @@ async function createEvent(userId: number, name: Name) {
   });
 }
 
-async function closeEvents(userId: number, date: Date) {
+async function closeEvents(userId: number, timezoneOffset: number) {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - timezoneOffset);
+  date.setHours(0, 0, 0, 0);
+
   // delete previous day events
   await db
     .delete(EventModel)
     .where(
       and(
-        lt(EventModel.createdAt, date),
+        lt(
+          sql`${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval`,
+          date,
+        ),
         ne(EventModel.state, "completed"),
         eq(EventModel.userId, userId),
       ),
@@ -193,8 +219,6 @@ async function closeEvents(userId: number, date: Date) {
     .then(
       (row) => row.at(0) || { promodoro: 25, shortBreak: 5, longBreak: 15 },
     );
-
-  const currentDate = new Date();
 
   // close completed events
   for (const name of EventModel.name.enumValues) {
@@ -223,7 +247,7 @@ async function closeEvents(userId: number, date: Date) {
           eq(EventModel.name, name),
           lt(
             EventModel.start,
-            new Date(currentDate.getTime() - duration * 60 * 1000),
+            sql`CURRENT_TIMESTAMP - ${duration + " minutes"}::interval`,
           ),
           eq(EventModel.state, "active"),
           eq(EventModel.userId, userId),
