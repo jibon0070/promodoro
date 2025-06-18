@@ -27,7 +27,7 @@ export default async function getdailyProgress(uData: unknown): Promise<
     );
 
     const date = new Date();
-    date.setHours(24, timezoneOffset, 0, 0);
+    date.setHours(0, timezoneOffset, 0, 0);
 
     const currentPromodoros = await getCurrentPromodoros(payload.id, date);
 
