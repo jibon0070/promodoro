@@ -81,7 +81,6 @@ async function getCurrentPromodoros(
 ): Promise<number> {
   const date = new Date();
   date.setMinutes(date.getMinutes() - timezoneOffset);
-  console.log(date, timezoneOffset);
   date.setHours(0, 0, 0, 0);
 
   const createdAtQuery = sql`${EventModel.createdAt} - ${timezoneOffset + " minutes"}::interval`;
