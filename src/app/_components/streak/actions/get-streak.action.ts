@@ -47,7 +47,7 @@ async function getStreak(
   const payload = await auth.getPayload();
 
   const dateQuery =
-    sql<Date>`(${EventModel.createdAt} + ${minuteOffset + " minutes"}::interval)::date`.as(
+    sql<Date>`(${EventModel.createdAt} - ${minuteOffset + " minutes"}::interval)::date`.as(
       "date",
     );
   const distinctQuery = db
@@ -87,7 +87,7 @@ async function getStreak(
     .as("streakQuery");
 
   const date = new Date();
-  date.setMinutes(date.getMinutes() + minuteOffset);
+  date.setMinutes(date.getMinutes() - minuteOffset);
   date.setHours(0, 0, 0, 0);
 
   const [currentStreak, longestStreak] = await Promise.all([
